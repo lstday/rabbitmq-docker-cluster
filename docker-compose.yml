@@ -1,0 +1,75 @@
+version: "3"
+services:
+  rabbit1:
+    image: rabbitmq:3-management
+    hostname: rabbit1
+    volumes:
+      - "./configs/rabbitmq.config:/etc/rabbitmq/rabbitmq.config"
+      - "./configs/enabled_plugins:/etc/rabbitmq/enabled_plugins"
+      - "./configs/definitions.json:/etc/rabbitmq/definitions.json"
+    environment:
+      - RABBITMQ_NODENAME=rabbit1
+      - RABBITMQ_ERLANG_COOKIE=12345
+      - CLUSTERED=true
+    networks: 
+      - cluster-network
+  
+  rabbit2:
+    image: rabbitmq:3-management
+    hostname: rabbit2
+    volumes:
+      - "./configs/rabbitmq.config:/etc/rabbitmq/rabbitmq.config"
+      - "./configs/enabled_plugins:/etc/rabbitmq/enabled_plugins"
+      - "./configs/definitions.json:/etc/rabbitmq/definitions.json"
+    environment:
+      - RABBITMQ_NODENAME=rabbit2
+      - CLUSTER_WITH=rabbit1
+      - RABBITMQ_ERLANG_COOKIE=12345
+      - CLUSTERED=true
+    depends_on:
+      - rabbit1
+    networks: 
+      - cluster-network
+  
+  rabbit3:
+    image: rabbitmq:3-management
+    hostname: rabbit3
+    volumes:
+      - "./configs/rabbitmq.config:/etc/rabbitmq/rabbitmq.config"
+      - "./configs/enabled_plugins:/etc/rabbitmq/enabled_plugins"
+      - "./configs/definitions.json:/etc/rabbitmq/definitions.json"
+    environment:
+      - RABBITMQ_NODENAME=rabbit3
+      - CLUSTER_WITH=rabbit1
+      - RABBITMQ_ERLANG_COOKIE=12345
+      - CLUSTERED=true
+    depends_on:
+      - rabbit1
+    networks: 
+      - cluster-network
+  
+  haproxy:
+    image: haproxy
+    hostname: haproxy
+    ports:
+      - 15672:15672
+      - 15670:15670
+      - 15674:15674
+      - 61613:61613
+      - 5672:5672
+      - 1936:1936
+      - 1883:1883
+      - 8883:8883
+    networks:
+      - cluster-network
+    depends_on:
+      - rabbit1
+      - rabbit2
+      - rabbit3
+    volumes:
+      - "./configs/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro"
+
+networks:
+  cluster-network:
+    driver: bridge
+
